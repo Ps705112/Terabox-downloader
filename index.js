@@ -73,8 +73,8 @@ bot.on("text", async (ctx) => {
         if (!downloadUrl) {
             return ctx.reply("❌ No download link found.");
         }
-
-        if (fileSize > 50000000) {
+//50000000
+        if (fileSize > 10000000000) {
             return ctx.reply(`🚨 Video is too large for Telegram! Download manually: ${downloadUrl}`);
         }
 
