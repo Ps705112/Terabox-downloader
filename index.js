@@ -5,7 +5,7 @@ const fs = require("fs");
 const { MongoClient } = require("mongodb");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const BASE_URL = "https://alphaapis.org/terabox";
+const BASE_URL = "https://alphaapis.org/terabox/v3/dl?id="; // Updated API link
 const CHANNEL_USERNAME = "@awt_bots";
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -57,7 +57,7 @@ bot.on("text", async (ctx) => {
     const processingMsg = await ctx.reply("⏳ Fetching video link...");
 
     try {
-        const response = await axios.get(`${BASE_URL}?id=${videoId}`);
+        const response = await axios.get(`${BASE_URL}${videoId}`); // Updated API call
         console.log("API Response:", response.data);
 
         if (!response.data || response.data.success !== true) {
@@ -73,7 +73,7 @@ bot.on("text", async (ctx) => {
         if (!downloadUrl) {
             return ctx.reply("❌ No download link found.");
         }
-//50000000
+
         if (fileSize > 50000000) {
             return ctx.reply(`🚨 Video is too large for Telegram! Download manually: ${downloadUrl}`);
         }
