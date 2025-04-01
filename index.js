@@ -5,7 +5,7 @@ const { MongoClient } = require("mongodb");
 const https = require("https");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const BASE_URL = "https://alphaapis.org/terabox/v3/dl?id="; // Updated API link
+const BASE_URL = "https://alphaapis.org/terabox?id="; // Updated API link
 const CHANNEL_USERNAME = "@Potterhub";
 const MONGO_URI = process.env.MONGO_URI;
 
