@@ -7,7 +7,7 @@ const https = require("https");
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const BASE_URL = "https://mediacore-069834418e6e.herokuapp.com/media";
 const API_TOKEN = "9660299244a2786fe68fe46860100"; // Consider moving to .env
-const CHANNEL_USERNAME = "@awt_bots";
+const CHANNEL_USERNAME = "@Potterhub";
 const MONGO_URI = process.env.MONGO_URI;
 
 // Create HTTP agent for faster persistent connections
