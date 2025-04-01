@@ -5,8 +5,7 @@ const { MongoClient } = require("mongodb");
 const https = require("https");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const BASE_URL = "https://mediacore-069834418e6e.herokuapp.com/media";
-const API_TOKEN = "9660299244a2786fe68fe46860100"; // Consider moving to .env
+const BASE_URL = "https://alphaapis.org/terabox/v3/dl?id="; // Updated API link
 const CHANNEL_USERNAME = "@Potterhub";
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -61,22 +60,15 @@ bot.on("text", async (ctx) => {
     const processingMsg = await ctx.reply("⏳ Fetching video link...");
 
     try {
-        const response = await axios.get(BASE_URL, {
-            params: {
-                url: `https://1024terabox.com/s/${videoId}`,
-                token: API_TOKEN
-            },
-            httpsAgent: agent
-        });
-
+        const response = await axios.get(`${BASE_URL}${videoId}`, { httpsAgent: agent }); // Faster API request
         console.log("API Response:", response.data);
 
-        if (!response.data || response.data.error) {
+        if (!response.data || response.data.success !== true) {
             return ctx.reply("❌ Failed to fetch video. Please check the link.");
         }
 
-        const downloadUrl = response.data.downloadUrl; // Adjust based on actual API response structure
-        const fileSize = parseInt(response.data.size, 10) || 0;
+        const downloadUrl = response.data.data.downloadLink;
+        const fileSize = parseInt(response.data.data.size, 10) || 0;
 
         console.log("Download URL:", downloadUrl);
 
@@ -84,7 +76,7 @@ bot.on("text", async (ctx) => {
             return ctx.reply("❌ No download link found.");
         }
 
-        if (fileSize > 50000000) { // 50MB limit
+        if (fileSize > 50000000) {
             return ctx.reply(`🚨 Video is too large for Telegram! Download manually: ${downloadUrl}`);
         }
 
@@ -99,7 +91,7 @@ bot.on("text", async (ctx) => {
 
         await ctx.replyWithVideo(
             { source: videoStream.data }, 
-            { disable_notification: true }
+            { disable_notification: true } // Speeds up Telegram upload
         );
 
         await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
