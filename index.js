@@ -5,7 +5,7 @@ const { MongoClient } = require("mongodb");
 const https = require("https");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const BASE_URL = "https://alphaapis.org/terabox?id="; // Updated API link
+const BASE_URL = "https://alphaapis.org/terabox?id="; // Corrected API endpoint
 const CHANNEL_USERNAME = "@Potterhub";
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -36,7 +36,8 @@ async function saveUser(userId) {
 }
 
 function extractTeraboxId(text) {
-    const match = text.match(/\/s\/([a-zA-Z0-9_-]+)/);
+    // Improved regex to handle various TeraBox URL formats
+    const match = text.match(/(?:\/s\/|id=|v=)([a-zA-Z0-9_-]+)/);
     return match ? match[1] : text.trim();
 }
 
@@ -60,44 +61,68 @@ bot.on("text", async (ctx) => {
     const processingMsg = await ctx.reply("⏳ Fetching video link...");
 
     try {
-        const response = await axios.get(`${BASE_URL}${videoId}`, { httpsAgent: agent }); // Faster API request
+        const response = await axios.get(`${BASE_URL}${videoId}`, { 
+            httpsAgent: agent,
+            headers: {
+                'User-Agent': 'Mozilla/5.0'
+            }
+        });
         console.log("API Response:", response.data);
 
-        if (!response.data || response.data.success !== true) {
-            return ctx.reply("❌ Failed to fetch video. Please check the link.");
+        // Check response structure based on API docs
+        if (!response.data || response.data.status !== "success") {
+            const errorMsg = response.data?.message || "Failed to fetch video";
+            return ctx.reply(`❌ ${errorMsg}. Please check the link.`);
         }
 
-        const downloadUrl = response.data.data.downloadLink;
-        const fileSize = parseInt(response.data.data.size, 10) || 0;
+        const downloadUrl = response.data.data.download_url;
+        const fileName = response.data.data.file_name;
+        const fileSize = response.data.data.file_size || 0;
 
         console.log("Download URL:", downloadUrl);
+        console.log("File Name:", fileName);
 
         if (!downloadUrl) {
-            return ctx.reply("❌ No download link found.");
+            return ctx.reply("❌ No download link found in API response.");
         }
 
-        if (fileSize > 50000000) {
-            return ctx.reply(`🚨 Video is too large for Telegram! Download manually: ${downloadUrl}`);
+        // Convert file size to bytes if it's in MB format
+        const sizeInBytes = typeof fileSize === 'string' && fileSize.includes('MB') 
+            ? parseFloat(fileSize) * 1024 * 1024 
+            : fileSize;
+
+        if (sizeInBytes > 50000000) { // 50MB Telegram limit
+            return ctx.reply(`🚨 Video is too large for Telegram (${fileSize})! Download manually: ${downloadUrl}`);
         }
 
         await ctx.reply("✅ Video found! 🔄 Downloading...");
 
-        // Stream video directly to Telegram without saving to disk
-        const videoStream = await axios({
+        // Stream video directly to Telegram
+        const videoResponse = await axios({
             method: "GET",
             url: downloadUrl,
             responseType: "stream",
+            headers: {
+                'User-Agent': 'Mozilla/5.0'
+            }
         });
 
         await ctx.replyWithVideo(
-            { source: videoStream.data }, 
-            { disable_notification: true } // Speeds up Telegram upload
+            { source: videoResponse.data },
+            { 
+                caption: fileName || "Downloaded via TeraBox Bot",
+                disable_notification: true
+            }
         );
 
         await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
     } catch (error) {
-        console.error("Error fetching Terabox video:", error.message);
-        ctx.reply("❌ Something went wrong. Try again later.");
+        console.error("Error in processing:", {
+            message: error.message,
+            response: error.response?.data,
+            stack: error.stack
+        });
+        ctx.reply("❌ Something went wrong. Please try again later.");
     }
 });
 
